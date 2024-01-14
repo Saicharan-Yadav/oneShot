@@ -25,29 +25,45 @@ const validatePassword = (pass) => {
   return passwordSchema.validate(pass);
 };
 
-const userSchema = new mongoose.Schema({
-  email: {
-    type: "String",
-    unique: true,
-    require: true,
-    trim: true,
-    lowercase: true,
-    match: [
-      /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/,
-      "Please enter a valid email address",
+const userSchema = new mongoose.Schema(
+  {
+    email: {
+      type: "String",
+      unique: true,
+      require: true,
+      trim: true,
+      lowercase: true,
+      match: [
+        /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/,
+        "Please enter a valid email address",
+      ],
+    },
+    name: {
+      type: "String",
+      required: true,
+      trim: true,
+    },
+    password: {
+      type: "String",
+      required: true,
+      minLength: 8,
+      maxLength: 20,
+      validate: [
+        validatePassword,
+        "follow the Below Given rules to Generate a Password",
+      ],
+    },
+    blog: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "blog",
+      },
     ],
   },
-  password: {
-    type: "String",
-    required: true,
-    minLength: 8,
-    maxLength: 20,
-    validate: [
-      validatePassword,
-      "follow the Below Given rules to Generate a Password",
-    ],
-  },
-});
+  {
+    timestamps: true,
+  }
+);
 userSchema.pre("save", async function (next) {
   try {
     const hashedPassword = await bcrypt.hash(this.password, 10);

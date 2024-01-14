@@ -17,7 +17,7 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ msg: "invalid credentials" });
     } else {
       const acessToken = jwt.sign(
-        { users: users },
+        { user_id: users._id },
         process.env.jwt_acess_token,
         {
           expiresIn: "15m",
@@ -29,9 +29,7 @@ router.post("/", async (req, res) => {
 });
 
 router.post("/signup", async (req, res) => {
-  const email = req.body.email;
-  const password = req.body.password;
-  const retypePassword = req.body.retypePassword;
+  const { email, password, retypePassword, name } = req.body;
   if (retypePassword != password) {
     res.send({ error: "Passwords are not matching" });
   } else {
@@ -40,10 +38,8 @@ router.post("/signup", async (req, res) => {
       if (mail) {
         return res.status(400).json({ error: "Username already exists" });
       }
-      //   console.log("1");
-      const newUser = new user({ email, password });
-      //   console.log(newUser);
-      //   console.log("2");
+
+      const newUser = new user({ email, password, name });
       await newUser.save();
       res.status(201).json({ msg: "User created successfully" });
     } catch (error) {
