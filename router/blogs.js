@@ -37,10 +37,9 @@ router.post("/create", Authenticate, async (req, res) => {
     await newBlog.save();
 
     let author_document = await user.findOne({ _id: user_mongoose_id });
-    console.log(author_document);
+
     author_document.blog.push(newBlog._id);
-    console.log(author_document);
-    //await author_document.save();
+
     await user.updateOne(
       { _id: user_mongoose_id },
       {
@@ -54,10 +53,54 @@ router.post("/create", Authenticate, async (req, res) => {
   }
 });
 
+const ownerAuthenticate = async (req, res, next) => {
+  const userId = req.user.user_id;
+  const { blog_id } = req.body;
+  try {
+    console.log(req.body);
+    const blogDocument = await blog.findOne({ _id: blog_id });
+    if (blogDocument.author == userId) {
+      next();
+    } else {
+      res.status(404).json({ msg: "you are not the owner of this blog" });
+    }
+  } catch (e) {
+    res.status(404).json({ msg: e.message });
+  }
+};
+
 //edit
+//only owner should edit
+//owner ==>token ==>user_id ==> find blog id present or not ==>seperate atuthenticate function
+router.put("/edit", Authenticate, ownerAuthenticate, async (req, res) => {
+  const userId = req.user.user_id;
+  const { title, content, blog_id } = req.body;
+  try {
+    // console.log(blog_id, userId);
+    await blog.updateOne(
+      { _id: blog_id, author: userId },
+      { $set: { title: title, content: content } }
+    );
+    res.json({ msg: "sucessfully updated" });
+  } catch (e) {
+    res.status(404).json({ msg: e.message });
+  }
+});
 
 //delete
+router.post("/delete", Authenticate, ownerAuthenticate, async (req, res) => {
+  const userId = req.user.user_id;
+  const { blog_id } = req.body;
+  try {
+    await blog.deleteOne({ _id: blog_id, author: userId });
+    await user.updateOne({ _id: userId }, { $pull: { blog: blog_id } });
+    res.json({ msg: "sucessfully deleted" });
+  } catch (e) {
+    res.status(404).json({ msg: e.message });
+  }
+});
 
+//pagination
 //get all blogs
 router.get("/getall", async (req, res) => {
   try {
@@ -67,5 +110,8 @@ router.get("/getall", async (req, res) => {
     res.json({ msg: e.message });
   }
 });
+
+// like
+//comment
 
 module.exports = router;
