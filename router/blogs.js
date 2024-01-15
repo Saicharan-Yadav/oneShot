@@ -100,17 +100,101 @@ router.post("/delete", Authenticate, ownerAuthenticate, async (req, res) => {
   }
 });
 
+//pagination middleware
+
+function pagination(model) {
+  return async (req, res, next) => {
+    try {
+      const page = parseInt(req.query.page);
+      const limit = parseInt(req.query.limit);
+
+      const startIndex = (page - 1) * limit;
+      const endIndex = page * limit;
+
+      const results = {};
+
+      if (endIndex < (await model.countDocuments().exec())) {
+        results.next = {
+          page: page + 1,
+          limit: limit,
+        };
+      } else {
+        results.next = {
+          page: page,
+          limit: limit,
+        };
+      }
+
+      if (startIndex > 0) {
+        results.previous = {
+          page: page - 1,
+          limit: limit,
+        };
+      } else {
+        results.previous = {
+          page: 1,
+          limit: limit,
+        };
+      }
+
+      results.blogs = await model.find().limit(limit).skip(startIndex).exec();
+      res.results = results;
+      next();
+    } catch (e) {
+      res.status(404).json({ msg: e.message });
+    }
+  };
+}
+
 //pagination
 //get all blogs
-router.get("/getall", async (req, res) => {
+//using query params page=x& limit=y
+router.get("/getall", pagination(blog), async (req, res) => {
+  res.json(res.results);
+});
+
+/**
+ * router.get("/getall", pagination(blog), async (req, res) => {
+  const page = parseInt(req.query.page);
+  const limit = parseInt(req.query.limit);
+
+  const startIndex = (page - 1) * limit;
+  const endIndex = page * limit;
+
+  const results = {};
+
+  if (endIndex < (await blog.countDocuments().exec())) {
+    results.next = {
+      page: page + 1,
+      limit: limit,
+    };
+  } else {
+    results.next = {
+      page: page,
+      limit: limit,
+    };
+  }
+
+  if (startIndex > 0) {
+    results.previous = {
+      page: page - 1,
+      limit: limit,
+    };
+  } else {
+    results.previous = {
+      page: 1,
+      limit: limit,
+    };
+  }
+
   try {
-    const blogs = await blog.find();
-    res.json(blogs);
+    results.blogs = await blog.find().limit(limit).skip(startIndex).exec();
+    res.json(results);
   } catch (e) {
     res.json({ msg: e.message });
   }
 });
-
+ */
 // like
 //comment
 
