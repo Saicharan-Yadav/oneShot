@@ -53,6 +53,10 @@ const userSchema = new mongoose.Schema(
         "follow the Below Given rules to Generate a Password",
       ],
     },
+    imageurl: {
+      type: "String",
+      required: true,
+    },
     blog: [
       {
         type: mongoose.Schema.Types.ObjectId,

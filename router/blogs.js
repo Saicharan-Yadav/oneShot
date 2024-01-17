@@ -25,13 +25,13 @@ const Authenticate = (req, res, next) => {
 //create
 router.post("/create", Authenticate, async (req, res) => {
   try {
-    const { title, content } = req.body;
-    console.log(req.user);
+    const { title, content, imageurl } = req.body;
 
     const user_mongoose_id = req.user.user_id;
     const newBlog = new blog({
       title: title,
       content: content,
+      imageurl: imageurl,
       author: user_mongoose_id,
     });
     await newBlog.save();
@@ -55,9 +55,8 @@ router.post("/create", Authenticate, async (req, res) => {
 
 const ownerAuthenticate = async (req, res, next) => {
   const userId = req.user.user_id;
-  const { blog_id } = req.body;
+  const blog_id = req.body.blog_id;
   try {
-    console.log(req.body);
     const blogDocument = await blog.findOne({ _id: blog_id });
     if (blogDocument.author == userId) {
       next();
@@ -75,13 +74,13 @@ const ownerAuthenticate = async (req, res, next) => {
 router.put("/edit", Authenticate, ownerAuthenticate, async (req, res) => {
   const userId = req.user.user_id;
   const { title, content, blog_id } = req.body;
+
   try {
-    // console.log(blog_id, userId);
     await blog.updateOne(
       { _id: blog_id, author: userId },
       { $set: { title: title, content: content } }
     );
-    res.json({ msg: "sucessfully updated" });
+    res.status(200).json({ msg: "sucessfully updated" });
   } catch (e) {
     res.status(404).json({ msg: e.message });
   }
@@ -153,49 +152,39 @@ router.get("/getall", pagination(blog), async (req, res) => {
   res.json(res.results);
 });
 
-/**
- * router.get("/getall", pagination(blog), async (req, res) => {
-  const page = parseInt(req.query.page);
-  const limit = parseInt(req.query.limit);
-
-  const startIndex = (page - 1) * limit;
-  const endIndex = page * limit;
-
-  const results = {};
-
-  if (endIndex < (await blog.countDocuments().exec())) {
-    results.next = {
-      page: page + 1,
-      limit: limit,
-    };
-  } else {
-    results.next = {
-      page: page,
-      limit: limit,
-    };
-  }
-
-  if (startIndex > 0) {
-    results.previous = {
-      page: page - 1,
-      limit: limit,
-    };
-  } else {
-    results.previous = {
-      page: 1,
-      limit: limit,
-    };
-  }
-
+router.get("/pagesCount", async (req, res) => {
   try {
-    results.blogs = await blog.find().limit(limit).skip(startIndex).exec();
-    res.json(results);
+    const count = await blog.countDocuments().exec();
+    res.status(200).json({ count: count });
   } catch (e) {
-    res.json({ msg: e.message });
+    res.status(404).json({ msg: e.message });
   }
 });
- */
-// like
-//comment
+
+router.get("/profile", Authenticate, async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+    const userDocument = await user.findOne({ _id: userId });
+    res.json({ msg: userDocument });
+  } catch (e) {
+    res.status(404).json({ msg: e.message });
+  }
+});
+
+router.post("/owner", Authenticate, async (req, res) => {
+  const userId = req.user.user_id;
+  const { blog_id } = req.body;
+
+  try {
+    const blogDocument = await blog.findOne({ _id: blog_id });
+    if (blogDocument.author == userId) {
+      res.status(200).json({ msg: "you are the owner of this blog" });
+    } else {
+      res.status(404).json({ msg: "you are not the owner of this blog" });
+    }
+  } catch (e) {
+    res.status(404).json({ msg: e.message });
+  }
+});
 
 module.exports = router;
